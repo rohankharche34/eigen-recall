@@ -165,10 +165,6 @@ Clone repository:
 
     git clone https://github.com/rohankharche34/eigen-recall
 
-Move into project:
-
-    cd bench-p04-pcam
-
 Install dependencies:
 
     pip install -r requirements.txt
