@@ -82,6 +82,7 @@ Instead of flattening eigenvalues completely, the system attempts to gently comp
 PROJECT STRUCTURE
 --------------------------------------------------------------------------------
 
+```txt
 bench-p04-pcam/
 |
 |-- adapter.py
@@ -154,6 +155,7 @@ bench-p04-pcam/
 |
 |-- docs/
       Research notes, derivations, and design exploration.
+```
 
 --------------------------------------------------------------------------------
 INSTALLATION
