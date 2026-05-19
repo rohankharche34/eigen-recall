@@ -1,168 +1,392 @@
-# Anvil P-04 · PCAM Precision Agent — Benchmark Harness
+# Adaptive Spectral Tempering for Precision-Controlled Associative Memory
+## Anvil P-04 · PCAM Precision Agent
 
-Reference benchmark for **P-04 · Precision-Controlled Associative Memory**, built on the PCAM paper (NeurIPS 2026 submission). The base PCAM model is provided to you, frozen — your job is to design an agent that picks a precision vector for each corrupted query so the system retrieves the correct stored pattern.
+Adaptive Spectral Tempering (AST) is a geometry-aware precision controller developed for the Anvil Hackathon problem:
 
-Pure Python · NumPy only · CPU only · multi-seed evaluation.
+P-04 · Precision-Controlled Associative Memory
 
-## Quickstart
+Original benchmark/problem statement:
+[https://github.com/Sauhard74/Anvil-P-E](https://github.com/Sauhard74/Anvil-P-E/tree/main/bench-p04-pcam)
 
-```bash
-cd bench-p04-pcam
-pip install -r requirements.txt
-python self_check.py --adapter adapters.dummy:DummyAgent --quick
-```
+This repository contains:
+- the adaptive precision controller,
+- experiments,
+- analysis,
+- and design exploration built on top of the provided benchmark infrastructure.
 
-The Π=I dummy is the floor every submission must beat.
+The benchmark provides a frozen Precision-Controlled Associative Memory (PCAM) system. The only controllable component is a diagonal precision vector Π predicted for each corrupted query.
 
-## Layout
+This project explores how adaptive precision modulation can:
+- improve retrieval under corruption,
+- stabilize associative memory dynamics,
+- reduce pathological anisotropy,
+- and preserve discriminative spectral structure.
 
-```
-adapter.py                 Adapter abstract base class — one method, predict_precision
-pcam_model.py              Frozen PCAM dynamics, energy, gradient, Hessian
-data.py                    Seedable synthetic patterns + corruption
-metrics.py                 Pure evaluation primitives — retrieval, anisotropy
-harness.py                 Multi-seed orchestration + scoring (the anti-gaming core)
-run.py                     Full CLI
-self_check.py              Condensed CLI for local iteration
+Pure Python · NumPy only · CPU only.
+
+--------------------------------------------------------------------------------
+BACKGROUND
+--------------------------------------------------------------------------------
+
+Associative memory systems often exhibit highly anisotropic retrieval dynamics.
+
+Some spectral directions dominate retrieval because their eigenvalues are significantly larger than others.
+
+This creates an important tradeoff:
+
+- Large eigenvalues improve retrieval and semantic discrimination
+- Large eigenvalues also create unstable and anisotropic dynamics
+
+Flattening the spectrum entirely improves isotropy but destroys semantic structure.
+
+Leaving the spectrum untouched preserves retrieval but causes dynamical imbalance.
+
+The objective therefore becomes:
+
+    controlled spectral tempering
+
+instead of:
+- complete whitening,
+- or full isotropic cancellation.
+
+The controller attempts to:
+- preserve useful dominant eigendirections,
+- reduce pathological spectral imbalance,
+- stabilize retrieval geometry,
+- and improve corruption robustness.
+
+--------------------------------------------------------------------------------
+CORE IDEA
+--------------------------------------------------------------------------------
+
+The controller dynamically estimates:
+
+1. Query reliability
+2. Soft memory retrieval confidence
+3. Local retrieval geometry
+4. Local variance structure
+5. Spectral imbalance
+
+The predicted precision vector is then adapted per-query.
+
+The current design combines:
+- soft nearest-memory retrieval,
+- attractor reconstruction,
+- reliability-aware precision,
+- local geometry estimation,
+- and mild spectral compression.
+
+Instead of flattening eigenvalues completely, the system attempts to gently compress spectral disparity while preserving discriminative structure.
+
+--------------------------------------------------------------------------------
+PROJECT STRUCTURE
+--------------------------------------------------------------------------------
+
+adapter.py
+    Adapter interface
+
+pcam_model.py
+    Frozen PCAM dynamics
+
+data.py
+    Synthetic pattern generation + corruption
+
+metrics.py
+    Retrieval and anisotropy metrics
+
+harness.py
+    Multi-seed evaluation harness
+
+run.py
+    Full evaluation runner
+
+self_check.py
+    Fast local evaluation loop
+
 adapters/
-  dummy.py                 Π=I baseline (the floor)
-  variance.py              Reference · |query|-based precision (naive)
-  class_conditional.py     Reference · paper's Π*class approximation
-```
+    dummy.py
+        Π = I baseline
 
-## What you implement
+    variance.py
+        Variance-based reference controller
 
-Copy `adapters/dummy.py` to `adapters/myteam.py`. Replace `predict_precision`:
+    class_conditional.py
+        Paper-inspired class-conditional controller
 
-```python
-from adapter import Adapter
-import numpy as np
+    myteam.py
+        Adaptive Spectral Tempering controller
 
-class Engine(Adapter):
-    def __init__(self, stored_patterns, model_params):
-        """
-        stored_patterns : (K, N) — patterns already stored in the system
-        model_params    : dict with R, eta, beta, dt, T_max, tol, T_in, pi_min, pi_max
-        """
-        self.X = stored_patterns
-        self.N = stored_patterns.shape[1]
-        # one-time prep — train a model, compute statistics, etc.
+--------------------------------------------------------------------------------
+INSTALLATION
+--------------------------------------------------------------------------------
 
-    def predict_precision(self, corrupted_query):
-        """
-        corrupted_query : (N,) noisy input
-        returns         : (N,) positive precision values
-        """
-        return np.ones(self.N)   # baseline
-```
+Clone repository:
 
-The harness automatically clips your output to `[pi_min, pi_max]` and projects it onto the constraint set `{ π : mean(π) = 1 }` via fixed-point iteration before applying.
+    git clone <repo-url>
 
-## Anti-gaming — three layers
+Move into project:
 
-**L1 — Canonical seed.** A fixed seed drives patterns, R, and queries. Passing L1 alone is necessary, not sufficient.
+    cd bench-p04-pcam
 
-**L2 — Property-based multi-seed.** `--seeds` accepts ANY integers. For each seed the harness builds a **fresh pattern matrix, fresh R, fresh query set** and **constructs a fresh adapter instance**. No state leaks between seeds. A hardcoded agent passes L1 trivially and dies on L2 because every numeric value it was tuned against is regenerated.
+Install dependencies:
 
-**L3 — Held-out adversarial.** Council-only — private seeds at higher K and N, plus the eventual PCA-MNIST swap (Section 6.6 of the paper). Not distributed.
+    pip install -r requirements.txt
 
-### Per-seed penalty gates
+--------------------------------------------------------------------------------
+QUICK START
+--------------------------------------------------------------------------------
 
-- **Any seed with Δ < 0** halves the retrieval score
-- **Any seed with spread reduction ≤ 1.0×** halves the anisotropy score
+Run baseline controller:
 
-A submission that wins on the canonical seed and regresses on a held-out seed cannot reach full marks.
+    python self_check.py --adapter adapters.dummy:DummyAgent --quick
 
-## What gets judged
+Run AST controller:
 
-| Check               | Weight | Scoring rule                                                   |
-|---------------------|--------|----------------------------------------------------------------|
-| Retrieval Accuracy  | 70 pts | Linear in mean Δ over Π=I across seeds; full at Δ = 0.08      |
-| Anisotropy Spread   | 20 pts | Log-scaled mean reduction; full at 5× reduction                |
-| Code Quality        | 10 pts | Manual — working code, README, design notes                    |
+    python self_check.py --adapter adapters.myteam:Engine
 
-**Scoring rationale.** The paper's Π*class headline gain over Π=I is ~2.5% on PCA-MNIST. We set full marks at Δ = 0.08 (about 3× the paper's headline) so the bar is real engineering ambition, not just paper-level reproduction. For anisotropy, the paper achieves ~30× with explicit alignment; we set full marks at 5× so disciplined Hessian-aware designs can reach it.
+Run multi-seed evaluation:
 
-## Metric interpretation
+    python self_check.py \
+        --adapter adapters.myteam:Engine \
+        --seeds 1 2 3 4 5 42 101
 
-### Retrieval Δ accuracy
+Run full harness:
 
-| Mean Δ        | Significance                                                          |
-|---------------|----------------------------------------------------------------------|
-| Δ ≤ 0.00      | At or below baseline · zero on retrieval                              |
-| 0.00 – 0.02   | Marginal · some signal, agent isn't reading the corruption sharply    |
-| 0.02 – 0.05   | Solid · principled agent · scales linearly toward full marks          |
-| 0.05 – 0.08   | Strong · approaching full marks                                       |
-| ≥ 0.08        | Full marks (70 pts) · materially exceeds the paper's class-conditional gain |
+    python run.py --adapter adapters.myteam:Engine
 
-### Anisotropy spread reduction
+--------------------------------------------------------------------------------
+PRECISION CONTROLLER PIPELINE
+--------------------------------------------------------------------------------
 
-| Factor        | Significance                                                          |
-|---------------|----------------------------------------------------------------------|
-| ≤ 1.0×        | At baseline or worse · zero on anisotropy                            |
-| 1.0× – 1.5×   | Marginal · partial credit · log-scaled                                |
-| 1.5× – 3.0×   | Reading local geometry · log-scaled toward full marks                |
-| 3.0× – 5.0×   | Strong Hessian awareness                                             |
-| ≥ 5.0×        | Full marks (20 pts) · disciplined alignment                           |
+The controller performs the following steps:
 
-## Reference scores
+1. Normalize corrupted query
+2. Compute cosine similarities
+3. Perform soft retrieval using temperature-scaled softmax
+4. Estimate denoised attractor state
+5. Estimate coordinate reliability
+6. Estimate local geometry
+7. Apply spectral tempering
+8. Predict adaptive precision vector
+9. Normalize and stabilize output
 
-These are what the reference adapters score on default settings (synthetic v0, 5 seeds, K=16, N=64, noise [0.6, 0.75, 0.85]). Numbers are illustrative — use them to sanity-check your iteration.
+--------------------------------------------------------------------------------
+SOFT ATTRACTOR RECONSTRUCTION
+--------------------------------------------------------------------------------
 
-| Agent                                            | Mean Δ   | Mean reduction | Total auto |
-|--------------------------------------------------|----------|----------------|------------|
-| `adapters.dummy:DummyAgent`                      | 0.000    | 1.00×          | 0.00 / 90 |
-| `adapters.variance:VarianceAgent`                | negative | < 1.0×         | 0.00 / 90 |
-| `adapters.class_conditional:ClassConditionalAgent` | small    | ≈ 1.0×         | 0.00–5 / 90 |
+The controller reconstructs a denoised attractor estimate:
 
-Both reference agents are intentionally naive — they show that *trivial* precision designs don't beat baseline. The bench rewards principled work.
+    x_hat = weights @ self.X
 
-## Reading your results
+where retrieval weights are computed using softmax similarity.
 
-`self_check.py` prints a per-seed table + aggregated metrics + score block:
+The attractor acts as a soft reconstruction of the corrupted memory.
 
-```
-PER-SEED   ─ retrieval ─────────────       ── anisotropy ──
-seed     direct  Π=I    agent    Δ          base   agent   reduction
-----------------------------------------------------------------------
-  42    0.725  0.692  0.770  +0.078 ✓     20.84    8.50   2.45×
- 101    0.783  0.675  0.760  +0.085 ✓     34.41   12.40   2.77×
+Coordinates agreeing strongly with the attractor are considered more reliable and receive higher precision.
 
-AGGREGATED                                  VALUE
-mean Δ accuracy (over seeds)               +0.081
-min  Δ accuracy (worst seed)               +0.078
-mean spread reduction                        2.61×
-min  spread reduction                        2.45×
+--------------------------------------------------------------------------------
+LOCAL GEOMETRY ESTIMATION
+--------------------------------------------------------------------------------
 
-SCORE (automated, max 90)                  POINTS
-retrieval     (max 70)                      70.00
-anisotropy    (max 20)                       8.46
-TOTAL AUTOMATED                             78.46 / 90
-```
+Local geometry is estimated using weighted local variance:
 
-The `✓ / ✗` flag next to each Δ indicates whether the agent's dynamics beat direct cosine classification on that seed. This is **diagnostic only** — it does not affect your score. On synthetic random patterns, direct classify is already near-optimal because the patterns are well-separated; the dynamics' value-add only shows up cleanly on structured data (the L3 PCA-MNIST evaluation).
+    local_var = Σ w_i (x_i - x_hat)^2
 
-## Design hints
+High local variance:
+- indicates unstable directions,
+- reduces precision,
+- dampens overconfident updates.
 
-- **Variance-based**: down-weight dimensions that look noisy in the query. Simple, fast, mild positive Δ at best.
-- **Class-conditional**: predict the class first (Modern Hopfield one-shot), then set precision to match the class's typical magnitudes. Approximates the paper's Π*class.
-- **Geometry-aware**: read `model.hessian(approx_equilibrium)` and pick precision values that isotropise the eigenvalues of `Π^(1/2) H Π^(1/2)` — the construction producing the paper's 30× spread reduction (Theorem F3).
-- **Neural**: train a small MLP on (corrupted query, good precision) pairs you generate from the stored patterns.
+Low local variance:
+- indicates stable retrieval structure,
+- receives slightly higher precision.
 
-## Constraints
+This acts as a weak spectral conditioning prior.
 
-- The PCAM model is **frozen** — you do not modify `pcam_model.py`.
-- Precision is **diagonal and positive**. The harness projects onto `[0.1, 10.0]` with mean = 1 before applying. Pass anything that fits; the harness normalises.
-- **One forward pass** per query — no iterative refinement after observing dynamics.
+--------------------------------------------------------------------------------
+SPECTRAL INTERPRETATION
+--------------------------------------------------------------------------------
 
-## v0 notes
+The controller can be interpreted geometrically as performing:
 
-The public iteration bench uses synthetic random patterns (twin-pair construction in `data.py`) plus combined mask + Gaussian corruption. Patterns are well-separated by design, so direct cosine classification is already strong (~70-80%); the dynamics' main job here is to gracefully degrade.
+    partial spectral compression
 
-The L3 evaluation swaps in PCA-MNIST with the paper's mask noise (Section 6.6). On MNIST, patterns are structured and the dynamics' replay term does real work — the gap between direct and dynamics widens, and good precision designs add measurable value.
+instead of:
+- full whitening,
+- inverse-Hessian cancellation,
+- or complete isotropic flattening.
 
-Same harness, same interface, different data. Your agent design should generalize across both.
+The objective is to:
+- reduce pathological eigenvalue disparity,
+- preserve dominant semantic directions,
+- maintain retrieval robustness,
+- and stabilize convergence dynamics.
 
-## Hardware
+The project experimentally explores the tradeoff between:
+- retrieval quality,
+- and isotropic dynamics.
 
-NumPy only · CPU only · no GPU needed.
+--------------------------------------------------------------------------------
+BENCHMARK EVALUATION
+--------------------------------------------------------------------------------
+
+The benchmark evaluates:
+
+| Category               | Weight |
+|------------------------|--------|
+| Retrieval Accuracy     | 70 pts |
+| Anisotropy Reduction   | 20 pts |
+| Code Quality           | 10 pts |
+
+--------------------------------------------------------------------------------
+RETRIEVAL METRIC
+--------------------------------------------------------------------------------
+
+Measured relative to Π = I baseline.
+
+Interpretation:
+
+| Mean Δ         | Meaning                  |
+|----------------|--------------------------|
+| Δ ≤ 0.00       | baseline or worse        |
+| 0.00 – 0.02    | weak signal              |
+| 0.02 – 0.05    | meaningful improvement   |
+| 0.05 – 0.08    | strong                   |
+| ≥ 0.08         | full marks               |
+
+--------------------------------------------------------------------------------
+ANISOTROPY METRIC
+--------------------------------------------------------------------------------
+
+Measures spread reduction in retrieval dynamics.
+
+| Reduction      | Meaning                  |
+|----------------|--------------------------|
+| ≤ 1.0×         | baseline                 |
+| 1.0× – 1.5×    | mild conditioning        |
+| 1.5× – 3.0×    | geometry-aware           |
+| 3.0× – 5.0×    | strong conditioning      |
+| ≥ 5.0×         | full marks               |
+
+--------------------------------------------------------------------------------
+CURRENT EXPERIMENTAL OBSERVATIONS
+--------------------------------------------------------------------------------
+
+Empirical testing revealed an important tradeoff:
+
+- Strong spectral flattening improves isotropy but harms retrieval
+- Weak conditioning preserves retrieval but barely affects spread
+- Mild spectral compression gives the best balance
+
+This suggests:
+- dominant eigendirections are important for discrimination,
+- but uncontrolled spectral dominance destabilizes retrieval dynamics.
+
+The current controller therefore focuses on:
+- preserving semantic geometry,
+- while softly tempering spectral imbalance.
+
+--------------------------------------------------------------------------------
+ANTI-GAMING EVALUATION
+--------------------------------------------------------------------------------
+
+The benchmark includes:
+- canonical public seeds,
+- randomized multi-seed regeneration,
+- held-out adversarial evaluation.
+
+Each seed regenerates:
+- memory patterns,
+- corruption,
+- model parameters,
+- and adapter instances.
+
+The held-out evaluation uses:
+- larger dimensions,
+- PCA-MNIST structured memories,
+- harder corruption,
+- stronger anisotropy.
+
+The controller is designed to generalize across both synthetic and structured retrieval settings.
+
+--------------------------------------------------------------------------------
+DESIGN PHILOSOPHY
+--------------------------------------------------------------------------------
+
+The project intentionally avoids:
+- hardcoded seed tuning,
+- benchmark memorization,
+- brittle inverse-Hessian whitening,
+- aggressive isotropy enforcement.
+
+Instead, the controller emphasizes:
+- local geometry,
+- corruption robustness,
+- retrieval stability,
+- and cross-seed generalization.
+
+Because every benchmark eventually evolves into an arms race between geometry and whatever terrible shortcuts humans discover at 3 AM.
+
+--------------------------------------------------------------------------------
+CONSTRAINTS
+--------------------------------------------------------------------------------
+
+- NumPy only
+- CPU only
+- No GPU
+- One-pass inference only
+- No iterative refinement
+- Positive diagonal precision only
+- No modification of PCAM dynamics
+
+The harness automatically:
+- clips precision values,
+- enforces mean(Π) = 1,
+- and projects outputs into the valid constraint set.
+
+--------------------------------------------------------------------------------
+RESEARCH CONNECTIONS
+--------------------------------------------------------------------------------
+
+Relevant research directions include:
+- associative memory
+- Hopfield networks
+- spectral conditioning
+- covariance shrinkage
+- representation isotropy
+- Hessian conditioning
+- information geometry
+- partial whitening
+- neural collapse
+
+The project particularly explores:
+- retrieval geometry,
+- eigenspectrum shaping,
+- and adaptive spectral tempering.
+
+--------------------------------------------------------------------------------
+ABOUT THE BENCHMARK
+--------------------------------------------------------------------------------
+
+This project was developed for:
+
+    Anvil Hackathon
+    Problem P-04 · Precision-Controlled Associative Memory
+
+The original benchmark and PCAM framework were provided as part of the Anvil Hackathon problem statement:
+
+[https://github.com/Sauhard74/Anvil-P-E](https://github.com/Sauhard74/Anvil-P-E/tree/main/bench-p04-pcam)
+
+This repository contains:
+- the precision controller implementation,
+- experiments,
+- analysis,
+- and design exploration built on top of the provided benchmark infrastructure.
+
+--------------------------------------------------------------------------------
+LICENSE
+--------------------------------------------------------------------------------
+
+This repository contains original work built for the Anvil Hackathon benchmark.
+
+Refer to the original benchmark repository and competition rules for usage restrictions related to the provided framework and assets.
