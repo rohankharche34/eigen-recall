@@ -82,39 +82,78 @@ Instead of flattening eigenvalues completely, the system attempts to gently comp
 PROJECT STRUCTURE
 --------------------------------------------------------------------------------
 
-adapter.py
-    Adapter interface
-
-pcam_model.py
-    Frozen PCAM dynamics
-
-data.py
-    Synthetic pattern generation + corruption
-
-metrics.py
-    Retrieval and anisotropy metrics
-
-harness.py
-    Multi-seed evaluation harness
-
-run.py
-    Full evaluation runner
-
-self_check.py
-    Fast local evaluation loop
-
-adapters/
-    dummy.py
-        Π = I baseline
-
-    variance.py
-        Variance-based reference controller
-
-    class_conditional.py
-        Paper-inspired class-conditional controller
-
-    myteam.py
-        Adaptive Spectral Tempering controller
+bench-p04-pcam/
+│
+├── adapter.py
+│   Adapter abstract base class.
+│   Defines the interface every precision controller must implement.
+│
+├── pcam_model.py
+│   Frozen Precision-Controlled Associative Memory (PCAM) dynamics.
+│   Contains:
+│   - energy function
+│   - retrieval dynamics
+│   - gradients
+│   - Hessian estimation
+│
+├── data.py
+│   Synthetic pattern generation and corruption pipeline.
+│   Creates:
+│   - twin-pair memory patterns
+│   - Gaussian corruption
+│   - mask corruption
+│
+├── metrics.py
+│   Evaluation metrics.
+│   Computes:
+│   - retrieval accuracy
+│   - anisotropy spread
+│   - spectral reduction statistics
+│
+├── harness.py
+│   Multi-seed evaluation harness.
+│   Handles:
+│   - seed regeneration
+│   - anti-gaming evaluation
+│   - aggregation
+│   - score computation
+│
+├── run.py
+│   Full benchmark runner CLI.
+│
+├── self_check.py
+│   Fast local evaluation loop for development and debugging.
+│
+├── requirements.txt
+│   Python dependencies.
+│
+├── README.md
+│   Project documentation and benchmark overview.
+│
+├── adapters/
+│   Precision controller implementations.
+│   │
+│   ├── dummy.py
+│   │   Π = I baseline controller.
+│   │
+│   ├── variance.py
+│   │   Naive variance-based precision controller.
+│   │
+│   ├── class_conditional.py
+│   │   Paper-inspired class-conditional precision controller.
+│   │
+│   └── myteam.py
+│       Adaptive Spectral Tempering (AST) controller.
+│       Main project implementation.
+│
+├── experiments/
+│   Experimental logs, analysis scripts, and metric tracking.
+│
+├── results/
+│   Benchmark outputs and evaluation summaries.
+│
+└── docs/
+    Research notes, derivations, and design exploration.
 
 --------------------------------------------------------------------------------
 INSTALLATION
