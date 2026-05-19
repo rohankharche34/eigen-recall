@@ -163,7 +163,7 @@ INSTALLATION
 
 Clone repository:
 
-    git clone <repo-url>
+    git clone https://github.com/rohankharche34/eigen-recall
 
 Move into project:
 
