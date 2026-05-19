@@ -6,7 +6,7 @@ Adaptive Spectral Tempering (AST) is a geometry-aware precision controller devel
 P-04 · Precision-Controlled Associative Memory
 
 Original benchmark/problem statement:
-[https://github.com/Sauhard74/Anvil-P-E](https://github.com/Sauhard74/Anvil-P-E/tree/main/bench-p04-pcam)
+https://github.com/Sauhard74/Anvil-P-E/tree/main/bench-p04-pcam
 
 This repository contains:
 - the adaptive precision controller,
@@ -375,13 +375,7 @@ This project was developed for:
 
 The original benchmark and PCAM framework were provided as part of the Anvil Hackathon problem statement:
 
-[https://github.com/Sauhard74/Anvil-P-E](https://github.com/Sauhard74/Anvil-P-E/tree/main/bench-p04-pcam)
-
-This repository contains:
-- the precision controller implementation,
-- experiments,
-- analysis,
-- and design exploration built on top of the provided benchmark infrastructure.
+https://github.com/Sauhard74/Anvil-P-E/tree/main/bench-p04-pcam
 
 --------------------------------------------------------------------------------
 LICENSE
