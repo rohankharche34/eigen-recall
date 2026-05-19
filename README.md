@@ -83,77 +83,77 @@ PROJECT STRUCTURE
 --------------------------------------------------------------------------------
 
 bench-p04-pcam/
-│
-├── adapter.py
-│   Adapter abstract base class.
-│   Defines the interface every precision controller must implement.
-│
-├── pcam_model.py
-│   Frozen Precision-Controlled Associative Memory (PCAM) dynamics.
-│   Contains:
-│   - energy function
-│   - retrieval dynamics
-│   - gradients
-│   - Hessian estimation
-│
-├── data.py
-│   Synthetic pattern generation and corruption pipeline.
-│   Creates:
-│   - twin-pair memory patterns
-│   - Gaussian corruption
-│   - mask corruption
-│
-├── metrics.py
-│   Evaluation metrics.
-│   Computes:
-│   - retrieval accuracy
-│   - anisotropy spread
-│   - spectral reduction statistics
-│
-├── harness.py
-│   Multi-seed evaluation harness.
-│   Handles:
-│   - seed regeneration
-│   - anti-gaming evaluation
-│   - aggregation
-│   - score computation
-│
-├── run.py
-│   Full benchmark runner CLI.
-│
-├── self_check.py
-│   Fast local evaluation loop for development and debugging.
-│
-├── requirements.txt
-│   Python dependencies.
-│
-├── README.md
-│   Project documentation and benchmark overview.
-│
-├── adapters/
-│   Precision controller implementations.
-│   │
-│   ├── dummy.py
-│   │   Π = I baseline controller.
-│   │
-│   ├── variance.py
-│   │   Naive variance-based precision controller.
-│   │
-│   ├── class_conditional.py
-│   │   Paper-inspired class-conditional precision controller.
-│   │
-│   └── myteam.py
-│       Adaptive Spectral Tempering (AST) controller.
-│       Main project implementation.
-│
-├── experiments/
-│   Experimental logs, analysis scripts, and metric tracking.
-│
-├── results/
-│   Benchmark outputs and evaluation summaries.
-│
-└── docs/
-    Research notes, derivations, and design exploration.
+|
+|-- adapter.py
+|     Adapter abstract base class.
+|     Defines the interface every precision controller must implement.
+|
+|-- pcam_model.py
+|     Frozen Precision-Controlled Associative Memory (PCAM) dynamics.
+|     Contains:
+|     - energy function
+|     - retrieval dynamics
+|     - gradients
+|     - Hessian estimation
+|
+|-- data.py
+|     Synthetic pattern generation and corruption pipeline.
+|     Creates:
+|     - twin-pair memory patterns
+|     - Gaussian corruption
+|     - mask corruption
+|
+|-- metrics.py
+|     Evaluation metrics.
+|     Computes:
+|     - retrieval accuracy
+|     - anisotropy spread
+|     - spectral reduction statistics
+|
+|-- harness.py
+|     Multi-seed evaluation harness.
+|     Handles:
+|     - seed regeneration
+|     - anti-gaming evaluation
+|     - aggregation
+|     - score computation
+|
+|-- run.py
+|     Full benchmark runner CLI.
+|
+|-- self_check.py
+|     Fast local evaluation loop for development and debugging.
+|
+|-- requirements.txt
+|     Python dependencies.
+|
+|-- README.md
+|     Project documentation and benchmark overview.
+|
+|-- adapters/
+|     Precision controller implementations.
+|     |
+|     |-- dummy.py
+|     |     Π = I baseline controller.
+|     |
+|     |-- variance.py
+|     |     Naive variance-based precision controller.
+|     |
+|     |-- class_conditional.py
+|     |     Paper-inspired class-conditional precision controller.
+|     |
+|     |-- myteam.py
+|           Adaptive Spectral Tempering (AST) controller.
+|           Main project implementation.
+|
+|-- experiments/
+|     Experimental logs, analysis scripts, and metric tracking.
+|
+|-- results/
+|     Benchmark outputs and evaluation summaries.
+|
+|-- docs/
+      Research notes, derivations, and design exploration.
 
 --------------------------------------------------------------------------------
 INSTALLATION
